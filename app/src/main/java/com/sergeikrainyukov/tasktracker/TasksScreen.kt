@@ -13,17 +13,34 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.sergeikrainyukov.tasktracker.viewModels.TasksScreenViewModel
+import androidx.compose.runtime.livedata.observeAsState
+import java.text.SimpleDateFormat
+import java.util.Date
+
+fun convertMillisToDateStr(millis: Long): String {
+    val formatter = SimpleDateFormat("dd:MM:yyyy")
+    val date = Date(millis)
+    return formatter.format(date)
+}
 
 @Composable
-fun TasksScreen() {
-    val cardItems = mutableListOf(
-        CardItem("Проводил время с Верой","1ч 20мин", "10.10.2023"),
-        CardItem("Работа","1ч 0мин","11.10.2023"),
-    )
+fun TasksScreen(viewModel: TasksScreenViewModel) {
+
+    val words by viewModel.getTasks().observeAsState(initial = emptyList())
+
+    val cardItems = words.map {
+        CardItem(
+            title = it.name,
+            time = it.time,
+            date = convertMillisToDateStr(it.date)
+        )
+    }
     CardsList(cardItems)
 }
 

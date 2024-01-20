@@ -16,11 +16,13 @@ import androidx.navigation.compose.rememberNavController
 import com.sergeikrainyukov.tasktracker.db.AppDatabase
 import com.sergeikrainyukov.tasktracker.db.DbProvider
 import com.sergeikrainyukov.tasktracker.ui.theme.TaskTrackerTheme
+import com.sergeikrainyukov.tasktracker.viewModels.TasksScreenViewModel
 import com.sergeikrainyukov.tasktracker.viewModels.TrackerScreenViewModel
 
 class MainActivity : ComponentActivity() {
 
     private lateinit var trackerScreenViewModel: TrackerScreenViewModel
+    private lateinit var tasksScreenViewModel: TasksScreenViewModel
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -30,13 +32,18 @@ class MainActivity : ComponentActivity() {
             ViewModelFactory(DbProvider.provideAppDataBase(context = this))
         )[TrackerScreenViewModel::class.java]
 
+        tasksScreenViewModel = ViewModelProvider(
+            this,
+            ViewModelFactory(DbProvider.provideAppDataBase(context = this))
+        )[TasksScreenViewModel::class.java]
+
         setContent {
             TaskTrackerTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    App(trackerScreenViewModel)
+                    App(trackerScreenViewModel, tasksScreenViewModel)
                 }
             }
         }
@@ -45,16 +52,17 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun App(
-    trackerScreenViewModel: TrackerScreenViewModel
+    trackerScreenViewModel: TrackerScreenViewModel,
+    tasksScreenViewModel: TasksScreenViewModel,
 ) {
     val navController = rememberNavController()
     NavHost(navController = navController, startDestination = "menu") {
         composable("menu") { MenuScreen(navController) }
         composable("tasks") {
-            TasksScreen()
+            TasksScreen(tasksScreenViewModel)
         }
         composable("tracker") {
-            TrackerScreen(trackerScreenViewModel)
+            TrackerScreen(trackerScreenViewModel, navController)
         }
     }
 }
@@ -67,6 +75,10 @@ class ViewModelFactory(
         if (modelClass.isAssignableFrom(TrackerScreenViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
             return TrackerScreenViewModel(appDatabase) as T
+        }
+        if (modelClass.isAssignableFrom(TasksScreenViewModel::class.java)) {
+            @Suppress("UNCHECKED_CAST")
+            return TasksScreenViewModel(appDatabase) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }

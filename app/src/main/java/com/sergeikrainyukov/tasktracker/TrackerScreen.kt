@@ -12,47 +12,35 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.sergeikrainyukov.tasktracker.viewModels.TrackerScreenViewModel
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
 
 @Composable
-fun TrackerScreen(trackerScreenViewModel: TrackerScreenViewModel, navController: NavController) {
-    var time by remember { mutableLongStateOf(0L) } // время в миллисекундах
-    var isRunning by remember { mutableStateOf(false) } // состояние секундомера
+fun TrackerScreen(viewModel: TrackerScreenViewModel, navController: NavController) {
+    val time = viewModel.trackerLiveData.observeAsState(0)
+    val isStarted = viewModel.isStarted.observeAsState(false)
 
     val showDialog = remember { mutableStateOf(false) }
     val textState1 = remember { mutableStateOf("") }
 
-
     // Форматирование времени для отображения
-    val minutes = (time / 1000) / 60
-    val seconds = (time / 1000) % 60
-    val milliseconds = time % 1000 / 10
-
-    LaunchedEffect(isRunning) {
-        while (isRunning && isActive) {
-            delay(10)
-            time += 10
-        }
-    }
+    val minutes = time.value / 60
+    val seconds = if (time.value >= 60) time.value % 60 else time.value
 
     Column(
-        modifier = Modifier.fillMaxSize().padding(16.dp),
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text(text = "%02d:%02d:%02d".format(minutes, seconds, milliseconds))
+        Text(text = "%02d:%02d".format(minutes, seconds))
 
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -73,7 +61,11 @@ fun TrackerScreen(trackerScreenViewModel: TrackerScreenViewModel, navController:
                     confirmButton = {
                         Button(
                             onClick = {
-                                trackerScreenViewModel.saveTask(textState1.value, convertMillisToTimeString(time))
+                                viewModel.saveTask(
+                                    textState1.value,
+                                    convertMillisToTimeString(time.value)
+                                )
+                                viewModel.onClickFinish()
                                 showDialog.value = false
                                 navController.popBackStack()
                             }
@@ -95,9 +87,9 @@ fun TrackerScreen(trackerScreenViewModel: TrackerScreenViewModel, navController:
             }
             Button(
                 onClick = {
-                    isRunning = true
+                    viewModel.onClickPauseResume()
                 },
-                enabled = !isRunning,
+                enabled = !isStarted.value,
                 modifier = Modifier.padding(end = 8.dp)
             ) {
                 Text("Старт")
@@ -105,9 +97,9 @@ fun TrackerScreen(trackerScreenViewModel: TrackerScreenViewModel, navController:
 
             Button(
                 onClick = {
-                    isRunning = false
+                    viewModel.onClickPauseResume()
                 },
-                enabled = isRunning,
+                enabled = isStarted.value,
                 modifier = Modifier.padding(horizontal = 8.dp)
             ) {
                 Text("Пауза")
@@ -115,9 +107,8 @@ fun TrackerScreen(trackerScreenViewModel: TrackerScreenViewModel, navController:
 
             Button(
                 onClick = {
-                    isRunning = false
-//                    time = 0L
                     showDialog.value = true
+                    viewModel.onClickStop()
                 },
                 modifier = Modifier.padding(start = 8.dp)
             ) {
@@ -127,11 +118,9 @@ fun TrackerScreen(trackerScreenViewModel: TrackerScreenViewModel, navController:
     }
 }
 
-fun convertMillisToTimeString(millis: Long): String {
-    val hours = millis / (1000 * 60 * 60) % 24
-    val minutes = millis / (1000 * 60) % 60
-    val seconds = millis / 1000 % 60
-
-    return String.format("%02d:%02d:%02d", hours, minutes, seconds)
+fun convertMillisToTimeString(sec: Long): String {
+    val hours = sec / 3600
+    val minutes = sec / 60
+    return String.format("%02d:%02d:%02d", hours, minutes, if (sec >= 60) sec % 60 else sec)
 }
 

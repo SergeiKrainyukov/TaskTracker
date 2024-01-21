@@ -24,7 +24,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 
 fun convertMillisToDateStr(millis: Long): String {
-    val formatter = SimpleDateFormat("dd:MM:yyyy")
+    val formatter = SimpleDateFormat("dd.MM.yyyy")
     val date = Date(millis)
     return formatter.format(date)
 }
